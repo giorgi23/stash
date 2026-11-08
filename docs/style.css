@@ -113,3 +113,6 @@ h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0; }
 @media (max-width: 400px) {
   .item { grid-template-columns: 112px 1fr auto; gap: 10px; }
 }
+
+.import-btn { width: 100%; margin-bottom: 12px; }
+.add .primary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }

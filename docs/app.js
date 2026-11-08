@@ -99,7 +99,6 @@
     const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
     const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
     if (isIOS && !standalone) return 'Tip: tap Share → "Add to Home Screen" first. Videos saved in a Safari tab are stored separately from the home-screen app.';
-    if (!settings.ok) return 'Open Settings (top right) and add your server URL and token to start downloading.';
     if (!navigator.onLine) return "You're offline — saved videos still play.";
     return '';
   }
@@ -113,7 +112,7 @@
       if (!thumbURLs.has(v.id)) thumbURLs.set(v.id, URL.createObjectURL(v.thumbBlob));
       return thumbURLs.get(v.id);
     }
-    return `https://i.ytimg.com/vi/${v.ytId}/mqdefault.jpg`;
+    return v.ytId ? `https://i.ytimg.com/vi/${v.ytId}/mqdefault.jpg` : '';
   }
 
   function stateText(v) {
@@ -139,7 +138,8 @@
       if (v.watched) el.classList.add('watched');
       const img = el.querySelector('img');
       img.onerror = () => { img.style.visibility = 'hidden'; };
-      img.src = thumbSrc(v);
+      const src = thumbSrc(v);
+      if (src) img.src = src; else img.style.visibility = 'hidden';
       el.querySelector('.dur').textContent = fmtDur(v.duration);
       el.querySelector('.dur').hidden = !v.duration;
       el.querySelector('.watchbar').hidden = !(v.position > 5 && v.duration);
@@ -160,7 +160,7 @@
     const empty = $('#empty');
     empty.hidden = shown.length > 0;
     empty.textContent = vids.length === 0
-      ? 'Nothing stashed yet. Paste a YouTube link above.'
+      ? 'Nothing stashed yet. Download a video with any YouTube downloader site, then tap "Import video".'
       : filter === 'watched' ? 'Nothing watched yet.' : 'All caught up.';
     updateStorage();
   }
@@ -188,6 +188,7 @@
   async function addUrl(raw) {
     const ytId = parseYouTubeId(raw || '');
     if (!ytId) { alert("That doesn't look like a YouTube link."); return; }
+    if (!settings.ok) { alert('Downloading from a link needs the server (Settings). Easiest: download the video with any downloader site and tap "Import video".'); return; }
     const existing = await store.get(ytId);
     if (existing) {
       if (existing.status === 'error') { existing.status = 'queued'; existing.error = ''; await store.put(existing); render(); pump(); }
@@ -391,7 +392,11 @@
     add(v.watched ? 'Mark as not watched' : 'Mark as watched', async () => {
       v.watched = !v.watched; if (!v.watched) v.position = 0; await store.put(v); render();
     });
-    add('Open on YouTube', () => { window.open(v.url, '_blank'); });
+    add('Rename', async () => {
+      const name = prompt('Title', v.title || '');
+      if (name && name.trim()) { v.title = name.trim(); await store.put(v); render(); }
+    });
+    if (v.url) add('Open on YouTube', () => { window.open(v.url, '_blank'); });
     add('Delete', async () => {
       if (!confirm('Delete this video from your iPhone?')) return;
       await store.delBlob(id); await store.del(id);
@@ -453,6 +458,88 @@
     }
   });
 
+  // ---------- import downloaded files ----------
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'video/*,.mp4,.mov,.m4v,.webm';
+  fileInput.multiple = true;
+  fileInput.hidden = true;
+  document.body.appendChild(fileInput);
+
+  const importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.className = 'primary import-btn';
+  importBtn.textContent = '＋ Import video';
+  $('#addForm').after(importBtn);
+  importBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const files = [...fileInput.files];
+    fileInput.value = '';
+    for (const f of files) await importFile(f);
+  });
+
+  const cleanTitle = name => name
+    .replace(/\.[a-z0-9]{2,4}$/i, '')
+    .replace(/[_]+/g, ' ')
+    .replace(/\s*[\[(](\d{3,4}p|hd|full hd|720p|1080p)[\])]\s*/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim() || 'Video';
+
+  async function importFile(file) {
+    const id = 'f-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    const v = {
+      id, ytId: null, url: '', source: 'file',
+      title: cleanTitle(file.name || ''), channel: '', duration: 0,
+      status: 'working', stateText: 'Saving…', progress: 50,
+      size: file.size, position: 0, watched: false, addedAt: Date.now(),
+    };
+    await store.put(v);
+    await render();
+    try {
+      await store.putBlob(id, file);
+    } catch (_) {
+      await store.del(id); render();
+      alert('Not enough storage on your iPhone for this video.');
+      return;
+    }
+    const meta = await videoMeta(file);
+    Object.assign(v, { status: 'ready', progress: 100, stateText: '', duration: meta.duration || 0 });
+    if (meta.thumb) v.thumbBlob = meta.thumb;
+    await store.put(v);
+    if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+    render();
+  }
+
+  // Reads duration and grabs a frame for the thumbnail. Never fails: falls back to nothing.
+  function videoMeta(file) {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const el = document.createElement('video');
+      let duration = 0, finished = false;
+      const finish = thumb => {
+        if (finished) return; finished = true;
+        URL.revokeObjectURL(url);
+        resolve({ duration, thumb });
+      };
+      setTimeout(() => finish(null), 8000);
+      el.muted = true; el.playsInline = true; el.preload = 'auto';
+      el.onloadedmetadata = () => {
+        duration = isFinite(el.duration) ? el.duration : 0;
+        el.currentTime = Math.min(5, duration * 0.1 || 0.1);
+      };
+      el.onseeked = () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = 320; c.height = Math.round(320 * (el.videoHeight / el.videoWidth || 9 / 16));
+          c.getContext('2d').drawImage(el, 0, 0, c.width, c.height);
+          c.toBlob(b => finish(b), 'image/jpeg', 0.75);
+        } catch (_) { finish(null); }
+      };
+      el.onerror = () => finish(null);
+      el.src = url;
+    });
+  }
+
   // ---------- tabs ----------
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
@@ -480,7 +567,6 @@
     }
     await render();
     refreshBanner();
-    if (!settings.ok) openSettings();
     pump();
   })();
 

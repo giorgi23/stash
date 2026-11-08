@@ -1,6 +1,6 @@
 // Caches the app itself so Stash opens with no connection.
 // Videos are stored separately in IndexedDB, not here.
-const CACHE = 'stash-shell-v1';
+const CACHE = 'stash-shell-v2';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
