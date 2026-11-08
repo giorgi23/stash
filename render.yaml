@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: stash-server
+    runtime: docker
+    plan: free
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: API_TOKEN
+        generateValue: true
+      - key: MAX_HEIGHT
+        value: "720"

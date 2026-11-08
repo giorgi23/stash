@@ -1,0 +1,4 @@
+flask==3.1.*
+flask-cors==5.*
+gunicorn==23.*
+yt-dlp[default]

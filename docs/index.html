@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stash</title>
+<meta name="theme-color" content="#0f0f12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stash">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Stash</h1>
+    <span id="storage" class="muted"></span>
+  </div>
+  <button id="openSettings" class="icon-btn" aria-label="Settings">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</header>
+
+<form id="addForm" class="add">
+  <input id="urlInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a YouTube link">
+  <button type="button" id="pasteBtn" class="ghost">Paste</button>
+  <button type="submit" id="addBtn" class="primary">Add</button>
+</form>
+
+<div id="banner" class="banner" hidden></div>
+
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-filter="unwatched">To watch</button>
+  <button class="tab" data-filter="all">All</button>
+  <button class="tab" data-filter="watched">Watched</button>
+</nav>
+
+<main id="list" class="list"></main>
+<p id="empty" class="empty" hidden></p>
+
+<!-- Player -->
+<div id="player" class="player" hidden>
+  <div class="player-bar">
+    <button id="closePlayer" class="ghost">Done</button>
+    <span id="playerTitle" class="player-title"></span>
+  </div>
+  <video id="video" controls playsinline preload="metadata"></video>
+</div>
+
+<!-- Settings -->
+<div id="settings" class="sheet-wrap" hidden>
+  <div class="sheet">
+    <h2>Settings</h2>
+    <label>Server URL
+      <input id="serverUrl" type="url" placeholder="https://stash-server-xxxx.onrender.com" autocapitalize="off" spellcheck="false">
+    </label>
+    <label>Access token
+      <input id="serverToken" type="password" placeholder="API_TOKEN from Render" autocapitalize="off" spellcheck="false">
+    </label>
+    <div class="row">
+      <button id="testConn" class="ghost" type="button">Test connection</button>
+      <span id="testResult" class="muted"></span>
+    </div>
+    <p class="hint">Downloads run while Stash is open on screen. iOS pauses web apps in the background, so keep it open until the bar fills up — then you're good offline.</p>
+    <div class="row end">
+      <button id="saveSettings" class="primary" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<template id="itemTpl">
+  <article class="item">
+    <div class="thumb">
+      <img alt="" loading="lazy">
+      <span class="dur"></span>
+      <div class="watchbar"><div></div></div>
+    </div>
+    <div class="meta">
+      <h3 class="title"></h3>
+      <p class="sub muted"></p>
+      <div class="status">
+        <div class="dlbar"><div></div></div>
+        <span class="state"></span>
+      </div>
+    </div>
+    <button class="more icon-btn" aria-label="Options">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+    </button>
+  </article>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
